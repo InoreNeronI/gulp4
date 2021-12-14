@@ -1,10 +1,9 @@
-@import 'libs';
 @import 'mixins';
 @import 'vars';
 @import 'fonts';
 @import 'base';
 
 .container {
-    width: 1024px;
+    width: 50vw;
     margin: 0 auto;
 }

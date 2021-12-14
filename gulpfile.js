@@ -1,48 +1,41 @@
-// Gulp
-const { series, parallel, src, dest, watch } = require("gulp");
-const concat = require('gulp-concat');
-const del = require("del");
-const zip = require('gulp-zip');
+// Gulp and base stuff
+import gulp from 'gulp';
+import concat from 'gulp-concat';
+import del from 'del';
+import zip from 'gulp-zip';
 
-
-// SASS plugins
-const sass = require('gulp-sass');
-const autoprefixer = require('gulp-autoprefixer');
-const csso = require('gulp-csso');
-const sourcemaps = require('gulp-sourcemaps');
-sass.compiler = require('node-sass');
+// CSS plugins
+import sass from 'sass';
+import gulpSass from 'gulp-sass';
+const gSass = () => gulpSass(sass)()
+import autoprefixer from 'gulp-autoprefixer';
+import csso from 'gulp-csso';
 
 // JavaScript plugins
-const uglify = require('gulp-uglify');
-
-
-// Pug and HTML plugins
-const pug = require("gulp-pug");
-const prettyHtml = require('gulp-pretty-html');
+import uglify from 'gulp-uglify';
 
 // Images plugins
-const image = require('gulp-image');
+import imagemin, {gifsicle, mozjpeg, optipng, svgo} from 'gulp-imagemin';
 
 // BrowserSync
-const browserSync = require('browser-sync').create();
-
+import {create as bsCreate} from 'browser-sync';
+const browserSync = bsCreate();
 
 // Paths
 const paths = {
-    srcDir: "./src",
-    devDir: "./dev",
-    buildDir: "./build"
+	srcDir: './src',
+	devDir: './dev',
+	buildDir: './build'
 };
 
-
-// clean "dev" folder
+// clean 'dev' folder
 function cleanDev(cb) {
 	return del(paths.devDir).then(() => {
 		cb();
 	});
 }
 
-// clean "build" folder
+// clean 'build' folder
 function cleanBuild(cb) {
 	return del(paths.buildDir).then(() => {
 		cb();
@@ -50,150 +43,132 @@ function cleanBuild(cb) {
 }
 
 // Zip build folder
-function zipBuild(){
-	return src(paths.buildDir + '/**/*.*')
+function zipBuild() {
+	return gulp.src(paths.buildDir + '/**/*.*')
 		.pipe(zip('build.zip'))
-		.pipe(dest(paths.buildDir));
+		.pipe(gulp.dest(paths.buildDir));
 }
-
-
-// SASS Tasks
 
 // compile SASS to CSS and paste into dev folder
 function sassDev() {
-    const vendorsCssList = [
-        './node_modules/normalize.css/normalize.css'
-    ];
+	const vendorsCssList = [
+		'./node_modules/normalize.css/normalize.css'
+	];
 
-    return src(vendorsCssList)
-        .pipe(sourcemaps.init())
-        .pipe(src(paths.srcDir + '/scss/main.scss'))
-        .pipe(sourcemaps.init())
-        .pipe(sass().on('error', sass.logError))
-        .pipe(autoprefixer({
-            cascade: false
-        }))
-        .pipe(concat('style.css'))
-        .pipe(sourcemaps.write())
-		.pipe(dest(paths.devDir  + '/css'))
+	return gulp.src(vendorsCssList)
+		.pipe(gulp.src(paths.srcDir + '/scss/main.scss'))
+		.pipe(gSass())
+		.pipe(autoprefixer({cascade: false}))
+		.pipe(concat('style.css'))
+		.pipe(gulp.dest(paths.devDir  + '/css'))
 		.pipe(browserSync.stream());
 }
 
-function cssBuild(){
-	return src( paths.devDir + '/css/*.css')
+function cssBuild() {
+	return gulp.src( paths.devDir + '/css/*.css')
 		.pipe(csso({
 			restructure: false,
 			sourceMap: false,
 			debug: true
 		}))
-		.pipe(dest(paths.buildDir + '/css'));
+		.pipe(gulp.dest(paths.buildDir + '/css'));
 }
 
-
-// compile Pug files to HTML into "dev" folder
+// copy HTML files into 'dev' folder
 function htmlDev() {
-	return src(paths.srcDir + '/pug/views/*.pug')
-		.pipe(
-			pug({
-				basedir: "./pug/",
-				doctype: "html"
-			})
-		)
-		.pipe(prettyHtml({
-			indent_size: 4,
-			indent_char: ' ',
-			unformatted: ['code', 'pre', 'em', 'strong', 'span', 'i', 'b', 'br']
-		}))
-		.pipe(dest(paths.devDir));
+	return gulp.src(paths.srcDir + '/*.html')
+		.pipe(gulp.dest(paths.devDir));
 }
 
 function htmlBuild() {
-	return src(paths.devDir + "/*.html")
-		.pipe(dest(paths.buildDir));
+	return gulp.src(paths.devDir + '/*.html')
+		.pipe(gulp.dest(paths.buildDir));
 }
 
-function imagesDev(){
-	return src(paths.srcDir + '/images/**/*.*')
-		.pipe(dest(paths.devDir + '/images'));
+function imagesDev() {
+	return gulp.src(paths.srcDir + '/images/**/*.*')
+		.pipe(gulp.dest(paths.devDir + '/images'));
 }
 
-function imagesBuild(){
-	return src(paths.srcDir + '/images/**/*.*')
-		.pipe(image({
-				svgo: true
-			}))
-		.pipe(dest(paths.buildDir + '/images'));
+function imagesBuild() {
+	return gulp.src(paths.srcDir + '/images/**/*.*')
+		.pipe(imagemin([
+			gifsicle({interlaced: true}),
+			mozjpeg({quality: 75, progressive: true}),
+			optipng({optimizationLevel: 5}),
+			svgo({
+				plugins: [{
+					name: 'removeViewBox',
+					active: true
+				}, {
+					name: 'cleanupIDs',
+					active: false
+				}]
+			})
+		]))
+		.pipe(gulp.dest(paths.buildDir + '/images'));
 }
 
-function fontsDev(){
-	return src(paths.srcDir + '/fonts/**/*.*')
-		.pipe(dest(paths.devDir + '/fonts'));
+function fontsDev() {
+	return gulp.src(paths.srcDir + '/fonts/**/*.*')
+		.pipe(gulp.dest(paths.devDir + '/fonts'));
 }
 
-function fontsBuild(){
-	return src(paths.srcDir + '/fonts/**/*.*')
-		.pipe(dest(paths.buildDir + '/fonts'));
+function fontsBuild() {
+	return gulp.src(paths.srcDir + '/fonts/**/*.*')
+		.pipe(gulp.dest(paths.buildDir + '/fonts'));
 }
 
 function jsDev() {
-	const jsPaths = [
-		paths.srcDir + '/js/framework/**/*.js',
-		paths.srcDir + '/js/libraries/**/*.js',
-		paths.srcDir + '/js/plugins/**/*.js',
-		paths.srcDir + '/js/*.js'
-	];
-
-	return src(jsPaths)
+	return gulp.src(paths.srcDir + '/js/**/*.js')
 		.pipe(concat('main.js'))
-		.pipe(dest( paths.devDir + '/js'));
+		.pipe(gulp.dest(paths.devDir + '/js'));
 }
 
 function jsBuild() {
-	return src(paths.devDir + '/js/*.js')
+	return gulp.src(paths.devDir + '/js/*.js')
 		.pipe(uglify())
-		.pipe(dest( paths.buildDir + '/js'));
+		.pipe(gulp.dest(paths.buildDir + '/js'));
 }
 
-
-function serveDev(done){
-    browserSync.init({
+function serveDev(done) {
+	browserSync.init({
 		watch: true,
-        server: {
-            baseDir: './dev'
-        }
-    });
-    done();
+		server: {
+			baseDir: './dev'
+		}
+	});
+	done();
 }
 
-function serveBuild(done){
-    browserSync.init({
-        server: {
-            baseDir: './build'
-        }
-    });
-    done();
+function serveBuild(done) {
+	browserSync.init({
+		server: {
+			baseDir: './build'
+		}
+	});
+	done();
 }
 
-
-function watchDev(){
-    watch(paths.srcDir + '/**/*.+(css|scss|sass)', sassDev);
-    watch(paths.srcDir + '/pug/**/*.pug', htmlDev);
-    watch(paths.srcDir + '/images/**/*.*', imagesDev);
-    watch(paths.srcDir + '/js/**/*.js', jsDev);
+function watchDev() {
+	gulp.watch(paths.srcDir + '/**/*.html', htmlDev);
+	gulp.watch(paths.srcDir + '/**/*.+(css|scss|sass)', sassDev);
+	gulp.watch(paths.srcDir + '/js/**/*.js', jsDev);
+	gulp.watch(paths.srcDir + '/images/**/*.*', imagesDev);
+	gulp.watch(paths.srcDir + '/fonts/**/*.*', fontsDev);
 }
 
-exports.default = series(
-	cleanDev, 
-	parallel(jsDev, fontsDev, htmlDev, sassDev, imagesDev), 
-	serveDev, 
+export default gulp.series(
+	cleanDev,
+	gulp.parallel(jsDev, fontsDev, htmlDev, sassDev, imagesDev),
+	serveDev,
 	watchDev
 );
 
-exports.build = series(
+export var build = gulp.series(
 	cleanBuild,
-	parallel(htmlBuild, cssBuild, jsBuild, imagesBuild, fontsBuild),
+	gulp.parallel(htmlBuild, cssBuild, jsBuild, imagesBuild, fontsBuild),
 	zipBuild
 );
 
-exports.serveBuild = serveBuild;
-
+export {serveBuild};

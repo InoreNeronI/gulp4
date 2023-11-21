@@ -1,7 +1,7 @@
 // Gulp and base stuff
 import gulp from 'gulp';
 import concat from 'gulp-concat';
-import del from 'del';
+import { deleteAsync } from 'del';
 import zip from 'gulp-zip';
 
 // CSS plugins
@@ -30,14 +30,14 @@ const paths = {
 
 // clean 'dev' folder
 function cleanDev(cb) {
-	return del(paths.devDir).then(() => {
+	return deleteAsync(paths.devDir).then(() => {
 		cb();
 	});
 }
 
 // clean 'build' folder
 function cleanBuild(cb) {
-	return del(paths.buildDir).then(() => {
+	return deleteAsync(paths.buildDir).then(() => {
 		cb();
 	});
 }
